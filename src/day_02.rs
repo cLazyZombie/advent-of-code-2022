@@ -49,8 +49,8 @@ enum MatchResult {
     Draw,
 }
 
-impl<'a> From<&'a str> for MatchResult {
-    fn from(s: &'a str) -> Self {
+impl From<&str> for MatchResult {
+    fn from(s: &str) -> Self {
         match s {
             "X" => MatchResult::Lose,
             "Y" => MatchResult::Draw,
