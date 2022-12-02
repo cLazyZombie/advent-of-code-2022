@@ -5,8 +5,8 @@ pub enum RPS {
     Scissors,
 }
 
-impl<'a> From<&'a str> for RPS {
-    fn from(s: &'a str) -> Self {
+impl From<&str> for RPS {
+    fn from(s: &str) -> Self {
         match s {
             "A" | "X" => RPS::Rock,
             "B" | "Y" => RPS::Paper,
