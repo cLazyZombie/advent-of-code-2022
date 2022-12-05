@@ -73,12 +73,11 @@ fn find_badge(line_a: &str, line_b: &str, line_c: &str) -> Option<u8> {
     let line_ab = line_a
         .intersection(&line_b)
         .into_iter()
-        .map(|c| *c)
+        .copied()
         .collect::<HashSet<u8, RandomState>>();
 
-    let mut line_abc = line_ab.intersection(&line_c).into_iter().map(|c| *c);
-    let badge = line_abc.next();
-    badge
+    let mut line_abc = line_ab.intersection(&line_c).into_iter().copied();
+    line_abc.next()
 }
 
 #[cfg(test)]
