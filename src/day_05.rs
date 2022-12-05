@@ -20,6 +20,31 @@ pub fn solve_part1(input: &str) -> String {
         .collect()
 }
 
+pub fn solve_part2(input: &str) -> String {
+    let mut lines = input.lines();
+    let mut cargo_stack = load_cargo_stack(&mut lines);
+    let commands = parse_command(&mut lines);
+
+    for command in commands {
+        let Command::Move(count, from, to) = command;
+
+        let mut temp = Vec::new();
+        for _ in 0..count {
+            let cargo = cargo_stack[from - 1].pop_back().unwrap();
+            temp.push(cargo);
+        }
+
+        for cargo in temp.into_iter().rev() {
+            cargo_stack[to - 1].push_back(cargo);
+        }
+    }
+
+    cargo_stack
+        .iter()
+        .map(|stack| *stack.back().unwrap())
+        .collect()
+}
+
 fn get_cargo_stack_count(lines: &Lines) -> usize {
     let char_count = lines.clone().next().unwrap().chars().count();
     (char_count + 1) / 4
@@ -128,5 +153,27 @@ move 1 from 1 to 2"#;
         let input = include_str!("../input/day_05.txt");
         let answer = solve_part1(input);
         assert_eq!(answer, "BSDMQFLSP");
+    }
+
+    #[test]
+    fn test_part2_sample() {
+        let input = r#"    [D]    
+[N] [C]    
+[Z] [M] [P]
+1   2   3 
+        
+move 1 from 2 to 1
+move 3 from 1 to 3
+move 2 from 2 to 1
+move 1 from 1 to 2"#;
+        let answer = solve_part2(input);
+        assert_eq!(answer, "MCD");
+    }
+
+    #[test]
+    fn test_part2() {
+        let input = include_str!("../input/day_05.txt");
+        let answer = solve_part2(input);
+        assert_eq!(answer, "PGSQBFLDP");
     }
 }
