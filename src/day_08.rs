@@ -152,9 +152,7 @@ fn get_score(grid: &Vec<Vec<u8>>, x: usize, y: usize) -> u32 {
         }
     }
 
-    let score = left_score * right_score * up_score * down_score;
-    println!("{} {} = {}", x, y, score);
-    score
+    left_score * right_score * up_score * down_score
 }
 
 #[cfg(test)]
