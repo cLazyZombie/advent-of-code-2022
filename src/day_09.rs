@@ -147,6 +147,6 @@ U 20 "#;
     fn test_part2() {
         let input = include_str!("../input/day_09.txt");
         let answer = solve_part2(input);
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 2643);
     }
 }
