@@ -23,6 +23,47 @@ pub fn solve_part1(input: &str) -> u64 {
     monkeys[0].inspected * monkeys[1].inspected
 }
 
+pub fn solve_part2(input: &str) -> u64 {
+    let mut monkeys = load_monkeys(input);
+
+    let mut total_divider = 1;
+    for monkey in &monkeys {
+        match &monkey.test {
+            Test::DivisibleBy(divider) => {
+                total_divider *= divider;
+            }
+        }
+    }
+    // println!("total_divider: {}", total_divider);
+
+    // for _round in 1..=10000 {
+    for _round in 1..=10000 {
+        for monkey_idx in 0..monkeys.len() {
+            monkeys[monkey_idx].inspected += monkeys[monkey_idx].items.len() as u64;
+            for item in monkeys[monkey_idx].items.clone() {
+                let changed = monkeys[monkey_idx].operation.run(item) % total_divider;
+                let test_result = monkeys[monkey_idx].test.run(changed);
+                let throw_to = if test_result {
+                    monkeys[monkey_idx].if_true_throw_to as usize
+                } else {
+                    monkeys[monkey_idx].if_false_throw_to as usize
+                };
+
+                monkeys[throw_to].items.push(changed);
+            }
+            monkeys[monkey_idx].items.clear();
+        }
+
+        // println!("== After round {} ==", _round);
+        // for (idx, monkey) in monkeys.iter().enumerate() {
+        //     println!("Monkey {}: {} times", idx, monkey.inspected);
+        // }
+    }
+
+    monkeys.sort_by(|a, b| b.inspected.cmp(&a.inspected));
+    monkeys[0].inspected * monkeys[1].inspected
+}
+
 fn load_monkeys(input: &str) -> Vec<Monkey> {
     let mut monkeys = Vec::new();
     let mut lines = input.lines();
@@ -213,5 +254,18 @@ mod tests {
         let input = include_str!("../input/day_11.txt");
         let answer = solve_part1(input);
         assert_eq!(answer, 88208);
+    }
+
+    #[test]
+    fn test_part2_sample() {
+        let answer = solve_part2(SAMPLE_INPUT);
+        assert_eq!(answer, 2713310158);
+    }
+
+    #[test]
+    fn test_part2() {
+        let input = include_str!("../input/day_11.txt");
+        let answer = solve_part2(input);
+        assert_eq!(answer, 21115867968);
     }
 }
