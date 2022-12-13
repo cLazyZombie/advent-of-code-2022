@@ -3,9 +3,9 @@ use std::cmp::Ordering;
 pub fn solve_part1(input: &str) -> i32 {
     let mut result = 0;
     let input = parse_input(input);
-    for (idx, (left, right)) in input.iter().enumerate() {
-        let order = is_right_order(left, right);
-        if order == Order::Right || order == Order::Continue {
+    for (idx, (left, right)) in pair_lists(&input).into_iter().enumerate() {
+        let ordering = left.cmp(right);
+        if ordering == Ordering::Less || ordering == Ordering::Equal {
             result += idx as i32 + 1;
         }
     }
@@ -13,21 +13,12 @@ pub fn solve_part1(input: &str) -> i32 {
 }
 
 pub fn solve_part2(input: &str) -> i32 {
-    let mut input: Vec<List> = parse_input(input)
-        .into_iter()
-        .flat_map(|(l, r)| [l, r])
-        .collect();
-
+    let mut input: Vec<List> = parse_input(input);
     let div1 = parse_line("[[2]]");
     let div2 = parse_line("[[6]]");
     input.push(div1);
     input.push(div2);
-
-    input.sort_by(|l, r| match is_right_order(l, r) {
-        Order::Right => Ordering::Less,
-        Order::NotRight => Ordering::Greater,
-        Order::Continue => Ordering::Equal,
-    });
+    input.sort();
 
     let mut result = 1;
 
@@ -40,76 +31,67 @@ pub fn solve_part2(input: &str) -> i32 {
     result
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-enum Order {
-    Right,
-    NotRight,
-    Continue,
+#[derive(Debug, PartialEq, Eq)]
+struct List {
+    values: Vec<Value>,
 }
 
-fn is_right_order(left: &List, right: &List) -> Order {
-    let mut left_it = left.values.iter();
-    let mut right_it = right.values.iter();
-    loop {
-        let left_value = left_it.next();
-        let right_value = right_it.next();
-
-        if left_value.is_none() && right_value.is_none() {
-            return Order::Continue;
-        } else if left_value.is_none() {
-            return Order::Right;
-        } else if right_value.is_none() {
-            return Order::NotRight;
-        }
-
-        let left_value = left_value.unwrap();
-        let right_value = right_value.unwrap();
-
-        match (left_value, right_value) {
-            (Value::Value(left_value), Value::Value(right_value)) => {
-                match left_value.cmp(right_value) {
-                    Ordering::Less => return Order::Right,
-                    Ordering::Greater => return Order::NotRight,
-                    Ordering::Equal => {}
-                }
-            }
-            (Value::Value(left_value), Value::List(right_list)) => {
-                match is_right_order(
-                    &List {
-                        values: vec![Value::Value(*left_value)],
-                    },
-                    right_list,
-                ) {
-                    Order::Right => return Order::Right,
-                    Order::NotRight => return Order::NotRight,
-                    Order::Continue => {}
-                }
-            }
-            (Value::List(left_list), Value::Value(right_value)) => {
-                match is_right_order(
-                    left_list,
-                    &List {
-                        values: vec![Value::Value(*right_value)],
-                    },
-                ) {
-                    Order::Right => return Order::Right,
-                    Order::NotRight => return Order::NotRight,
-                    Order::Continue => {}
-                }
-            }
-            (Value::List(left_list), Value::List(right_list)) => {
-                match is_right_order(left_list, right_list) {
-                    Order::Right => return Order::Right,
-                    Order::NotRight => return Order::NotRight,
-                    Order::Continue => {}
-                }
-            }
+impl List {
+    fn from_value(value: i32) -> Self {
+        List {
+            values: vec![Value::Value(value)],
         }
     }
 }
 
-struct List {
-    values: Vec<Value>,
+impl PartialOrd for List {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for List {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let mut left_it = self.values.iter();
+        let mut right_it = other.values.iter();
+        loop {
+            let (left_value, right_value) = match (left_it.next(), right_it.next()) {
+                (None, None) => return Ordering::Equal,
+                (None, Some(_)) => return Ordering::Less,
+                (Some(_), None) => return Ordering::Greater,
+                (Some(left_value), Some(right_value)) => (left_value, right_value),
+            };
+
+            match (left_value, right_value) {
+                (Value::Value(left_value), Value::Value(right_value)) => {
+                    match left_value.cmp(right_value) {
+                        Ordering::Equal => {}
+                        ord => return ord,
+                    }
+                }
+                (Value::Value(left_value), Value::List(right_list)) => {
+                    let left_list = List::from_value(*left_value);
+                    match left_list.cmp(right_list) {
+                        Ordering::Equal => {}
+                        ord => return ord,
+                    }
+                }
+                (Value::List(left_list), Value::Value(right_value)) => {
+                    let right_list = List::from_value(*right_value);
+                    match left_list.cmp(&right_list) {
+                        Ordering::Equal => {}
+                        ord => return ord,
+                    }
+                }
+                (Value::List(left_list), Value::List(right_list)) => {
+                    match left_list.cmp(right_list) {
+                        Ordering::Equal => {}
+                        ord => return ord,
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl ToString for List {
@@ -127,6 +109,7 @@ impl ToString for List {
     }
 }
 
+#[derive(Debug, Eq, PartialEq, PartialOrd, Ord)]
 enum Value {
     List(List),
     Value(i32),
@@ -141,25 +124,25 @@ impl ToString for Value {
     }
 }
 
-fn parse_input(input: &str) -> Vec<(List, List)> {
-    let mut lines = input.lines();
+fn pair_lists(list_array: &[List]) -> Vec<(&List, &List)> {
     let mut result = Vec::new();
-    loop {
-        let Some(line) = lines.next() else {
-            break;
-        };
-        let left_list = parse_line(line);
+    for idx in 0..(list_array.len() / 2) {
+        let left = &list_array[idx * 2];
+        let right = &list_array[idx * 2 + 1];
+        result.push((left, right));
+    }
+    result
+}
 
-        let Some(line) = lines.next() else {
-            break;
-        };
-        let right_list = parse_line(line);
-
-        result.push((left_list, right_list));
-
-        if lines.next().is_none() {
-            break;
+fn parse_input(input: &str) -> Vec<List> {
+    let mut result = Vec::new();
+    for line in input.lines() {
+        if line.trim().is_empty() {
+            continue;
         }
+
+        let list = parse_line(line);
+        result.push(list);
     }
 
     result
@@ -255,19 +238,24 @@ mod tests {
     fn test_right_order() {
         let left = parse_line("[1, 2, 3]");
         let right = parse_line("[1, 2, 3]");
-        assert_eq!(is_right_order(&left, &right), Order::Continue);
+        assert_eq!(left.cmp(&right), Ordering::Equal);
+        assert!(!left.lt(&right));
 
         let left = parse_line("[[1], [2, 3, 4]]");
         let right = parse_line("[[1], 4]");
-        assert_eq!(is_right_order(&left, &right), Order::Right);
+        assert_eq!(left.cmp(&right), Ordering::Less);
+        assert!(left.lt(&right));
 
         let left = parse_line("[[[[3, 5], [8, 2, 9, 7], [4, 5], [2]]], [10, []], [], [], []]");
         let right = parse_line("[[[[0, 9, 3, 7], 2, 1, [], [6]]]]");
-        assert_eq!(is_right_order(&left, &right), Order::NotRight);
+        assert_eq!(left.cmp(&right), Ordering::Greater);
+        assert!(!left.lt(&right));
 
         let left = parse_line("[[[1]], 2]");
         let right = parse_line("[[1], 2]");
-        assert_eq!(is_right_order(&left, &right), Order::Continue);
+        assert_eq!(left.cmp(&right), Ordering::Equal);
+        assert_eq!(left.partial_cmp(&right), Some(Ordering::Equal));
+        assert!(!left.lt(&right));
     }
 
     #[test]
