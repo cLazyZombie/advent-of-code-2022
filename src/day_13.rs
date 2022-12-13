@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 pub fn solve_part1(input: &str) -> i32 {
     let mut result = 0;
     let input = parse_input(input);
@@ -5,6 +7,36 @@ pub fn solve_part1(input: &str) -> i32 {
         let order = is_right_order(left, right);
         if order == Order::Right || order == Order::Continue {
             result += idx as i32 + 1;
+        }
+    }
+    result
+}
+
+pub fn solve_part2(input: &str) -> i32 {
+    let mut input: Vec<List> = parse_input(input)
+        .into_iter()
+        .map(|(l, r)| [l, r])
+        .flatten()
+        .collect();
+
+    let div1 = parse_line("[[2]]");
+    let div2 = parse_line("[[6]]");
+    input.push(div1);
+    input.push(div2);
+
+    input.sort_by(|l, r| match is_right_order(l, r) {
+        Order::Right => Ordering::Less,
+        Order::NotRight => Ordering::Greater,
+        Order::Continue => Ordering::Equal,
+    });
+
+    let mut result = 1;
+
+    for (idx, list) in input.iter().enumerate() {
+        if list.to_string() == "[[2]]" {
+            result *= idx as i32 + 1;
+        } else if list.to_string() == "[[6]]" {
+            result *= idx as i32 + 1;
         }
     }
     result
@@ -78,10 +110,6 @@ fn is_right_order(left: &List, right: &List) -> Order {
     }
 }
 
-pub fn solve_part2(input: &str) -> i32 {
-    0
-}
-
 struct List {
     values: Vec<Value>,
 }
@@ -148,11 +176,6 @@ fn parse_line(line: &str) -> List {
 fn tokenize(line: &str) -> impl Iterator<Item = &str> {
     let mut result = Vec::new();
     for tok in line.trim().split(|c: char| c.is_whitespace() || c == ',') {
-        // let tok = tok.trim();
-        // if tok.is_empty() {
-        //     continue;
-        // }
-
         if tok.starts_with("[") {
             let (left, right) = tok.split_at(1);
             result.push(left);
@@ -259,21 +282,19 @@ mod tests {
     fn test_part1() {
         let input = include_str!("../input/day_13.txt");
         let answer = solve_part1(input);
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 5684);
     }
 
     #[test]
-    #[ignore]
     fn test_part2_sample() {
         let answer = solve_part2(SAMPLE_INPUT);
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 140);
     }
 
     #[test]
-    #[ignore]
     fn test_part2() {
         let input = include_str!("../input/day_13.txt");
         let answer = solve_part2(input);
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 22932);
     }
 }
