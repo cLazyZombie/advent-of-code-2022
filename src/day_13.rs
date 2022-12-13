@@ -192,7 +192,7 @@ fn tokenize(line: &str) -> impl Iterator<Item = &str> {
     result.into_iter()
 }
 
-fn parse_list<'a>(mut it: &mut impl Iterator<Item = &'a str>) -> List {
+fn parse_list<'a>(it: &mut impl Iterator<Item = &'a str>) -> List {
     let mut values = Vec::new();
     while let Some(c) = it.next() {
         match c {
