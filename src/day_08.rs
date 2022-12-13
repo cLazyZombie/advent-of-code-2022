@@ -36,7 +36,7 @@ fn load_grid(input: &str) -> Vec<Vec<u8>> {
     for line in input.lines() {
         let mut row = Vec::new();
         for c in line.chars() {
-            if let Ok(h) = (&c.to_string()).parse::<u8>() {
+            if let Ok(h) = c.to_string().parse::<u8>() {
                 row.push(h);
             }
         }
@@ -90,8 +90,9 @@ fn is_visible(grid: &Vec<Vec<u8>>, x: usize, y: usize) -> bool {
 
     // check down
     let mut visible = true;
-    for i in y + 1..grid.len() {
-        if grid[i][x] >= cur {
+    // for i in y + 1..grid.len() {
+    for row in grid.iter().skip(y + 1) {
+        if row[x] >= cur {
             visible = false;
             break;
         }
@@ -103,7 +104,7 @@ fn is_visible(grid: &Vec<Vec<u8>>, x: usize, y: usize) -> bool {
     false
 }
 
-fn get_score(grid: &Vec<Vec<u8>>, x: usize, y: usize) -> u32 {
+fn get_score(grid: &[Vec<u8>], x: usize, y: usize) -> u32 {
     let cur = grid[y][x];
 
     // check left
@@ -143,10 +144,11 @@ fn get_score(grid: &Vec<Vec<u8>>, x: usize, y: usize) -> u32 {
     // check down
     let mut down_score = 0;
 
-    for i in y + 1..grid.len() {
+    // for i in y + 1..grid.len() {
+    for row in grid.iter().skip(y + 1) {
         down_score += 1;
 
-        let h = grid[i][x];
+        let h = row[x];
         if h >= cur {
             break;
         }

@@ -15,8 +15,7 @@ pub fn solve_part1(input: &str) -> i32 {
 pub fn solve_part2(input: &str) -> i32 {
     let mut input: Vec<List> = parse_input(input)
         .into_iter()
-        .map(|(l, r)| [l, r])
-        .flatten()
+        .flat_map(|(l, r)| [l, r])
         .collect();
 
     let div1 = parse_line("[[2]]");
@@ -33,10 +32,9 @@ pub fn solve_part2(input: &str) -> i32 {
     let mut result = 1;
 
     for (idx, list) in input.iter().enumerate() {
-        if list.to_string() == "[[2]]" {
-            result *= idx as i32 + 1;
-        } else if list.to_string() == "[[6]]" {
-            result *= idx as i32 + 1;
+        match list.to_string().as_str() {
+            "[[2]]" | "[[6]]" => result *= idx as i32 + 1,
+            _ => (),
         }
     }
     result
@@ -69,10 +67,10 @@ fn is_right_order(left: &List, right: &List) -> Order {
 
         match (left_value, right_value) {
             (Value::Value(left_value), Value::Value(right_value)) => {
-                if left_value < right_value {
-                    return Order::Right;
-                } else if right_value < left_value {
-                    return Order::NotRight;
+                match left_value.cmp(right_value) {
+                    Ordering::Less => return Order::Right,
+                    Ordering::Greater => return Order::NotRight,
+                    Ordering::Equal => {}
                 }
             }
             (Value::Value(left_value), Value::List(right_list)) => {
@@ -176,11 +174,11 @@ fn parse_line(line: &str) -> List {
 fn tokenize(line: &str) -> impl Iterator<Item = &str> {
     let mut result = Vec::new();
     for tok in line.trim().split(|c: char| c.is_whitespace() || c == ',') {
-        if tok.starts_with("[") {
+        if tok.starts_with('[') {
             let (left, right) = tok.split_at(1);
             result.push(left);
             result.extend(tokenize(right));
-        } else if tok.ends_with("]") {
+        } else if tok.ends_with(']') {
             let (left, right) = tok.split_at(tok.len() - 1);
             result.extend(tokenize(left));
             result.push(right);

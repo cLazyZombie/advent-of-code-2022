@@ -37,7 +37,7 @@ fn get_directory_size<'a>(
 ) -> u32 {
     let mut sum = 0;
     while let Some(line) = lines.next() {
-        let (cmd1, cmd2, cmd3) = parse_line(&line);
+        let (cmd1, cmd2, cmd3) = parse_line(line);
         match (cmd1, cmd2, cmd3) {
             ("$", "ls", _) => {}
             ("$", "cd", Some("..")) => {
@@ -72,7 +72,7 @@ fn get_directory_size<'a>(
 }
 
 fn parse_line(line: &str) -> (&str, &str, Option<&str>) {
-    let mut iter = line.trim().split_whitespace();
+    let mut iter = line.split_whitespace();
     let first = iter.next().unwrap();
     let second = iter.next().unwrap();
     let third = iter.next();

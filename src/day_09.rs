@@ -68,9 +68,9 @@ fn follow(h: (i32, i32), t: (i32, i32)) -> (i32, i32) {
             _ => (t.0, t.1),
         };
         return next;
-    } else {
-        return t;
     }
+
+    t
 }
 
 pub fn solve_part2(input: &str) -> u32 {

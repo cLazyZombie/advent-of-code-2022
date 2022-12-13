@@ -19,7 +19,7 @@ pub fn solve_part2(input: &str) -> u32 {
     shortest.unwrap()
 }
 
-fn next_node(visited: &Vec<bool>, distance: &Vec<u32>) -> Option<usize> {
+fn next_node(visited: &[bool], distance: &[u32]) -> Option<usize> {
     let mut min_dist = MAX_DIST;
     let mut min_idx = None;
 
@@ -74,7 +74,7 @@ fn is_neighbor(src: usize, dst: usize, width: usize) -> bool {
     diff_x + diff_y <= 1
 }
 
-fn can_go(src: usize, dst: usize, data: &Vec<Vec<u8>>) -> bool {
+fn can_go(src: usize, dst: usize, data: &[Vec<u8>]) -> bool {
     if !is_neighbor(src, dst, data[0].len()) {
         return false;
     }
@@ -93,10 +93,7 @@ fn get_height(h: u8) -> u8 {
 }
 
 fn load_data(input: &str) -> Vec<Vec<u8>> {
-    input
-        .lines()
-        .map(|line| line.as_bytes().iter().copied().collect())
-        .collect()
+    input.lines().map(|line| line.as_bytes().to_vec()).collect()
 }
 
 fn load_map(input: &str) -> (usize, Vec<usize>, usize, Vec<Vec<u32>>) {
