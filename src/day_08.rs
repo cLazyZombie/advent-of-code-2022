@@ -78,8 +78,9 @@ fn is_visible(grid: &Vec<Vec<u8>>, x: usize, y: usize) -> bool {
 
     // check up
     let mut visible = true;
-    for i in 0..y {
-        if grid[i][x] >= cur {
+    // for i in 0..y {
+    for row in grid.iter().take(y) {
+        if row[x] >= cur {
             visible = false;
             break;
         }
