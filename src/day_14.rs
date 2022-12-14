@@ -10,6 +10,7 @@ pub fn solve_part1(input: &str) -> i32 {
         } else {
             (500, 0)
         };
+
         loop {
             if p.1 >= max_y {
                 endless = Some(idx);
@@ -62,12 +63,11 @@ pub fn solve_part2(input: &str) -> i32 {
     let mut prev = None;
     let mut full = None;
     'outer: for idx in 1.. {
-        // let mut p = if let Some(prev) = prev.take() {
-        //     prev
-        // } else {
-        //     (500, 0)
-        // };
-        let mut p = (500, 0);
+        let mut p = if let Some(prev) = prev.take() {
+            prev
+        } else {
+            (500, 0)
+        };
 
         loop {
             // go down
