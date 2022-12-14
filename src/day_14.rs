@@ -55,10 +55,14 @@ pub fn solve_part2(input: &str) -> i32 {
 
     // floor
     let max_y = find_max_y(&lines) + 2;
-    let floor = Line::new((i32::MIN, max_y), (i32::MAX, max_y));
+    let max_x = find_max_x(&lines) + max_y;
+    let floor = Line::new((0, max_y), (max_x, max_y));
     lines.push(floor);
 
-    let mut points = Vec::new();
+    let mut world = World::<10>::new(max_x * 2, max_y);
+    for line in &lines {
+        world.add_line(line);
+    }
 
     let mut prev = None;
     let mut full = None;
@@ -72,7 +76,7 @@ pub fn solve_part2(input: &str) -> i32 {
         loop {
             // go down
             let next_p = (p.0, p.1 + 1);
-            if is_empty(next_p, &lines, &points) {
+            if world.is_empty(next_p) {
                 prev = Some(p);
                 p = next_p;
                 continue;
@@ -80,7 +84,7 @@ pub fn solve_part2(input: &str) -> i32 {
 
             // go down left
             let next_p = (p.0 - 1, p.1 + 1);
-            if is_empty(next_p, &lines, &points) {
+            if world.is_empty(next_p) {
                 prev = Some(p);
                 p = next_p;
                 continue;
@@ -88,19 +92,18 @@ pub fn solve_part2(input: &str) -> i32 {
 
             // go down right
             let next_p = (p.0 + 1, p.1 + 1);
-            if is_empty(next_p, &lines, &points) {
+            if world.is_empty(next_p) {
                 prev = Some(p);
                 p = next_p;
                 continue;
             }
 
             // stuck
-            // println!("{}: {:?}", idx, p);
             if p == (500, 0) {
                 full = Some(idx);
                 break 'outer;
             }
-            points.push(p);
+            world.add_point(p);
             break;
         }
     }
@@ -163,8 +166,94 @@ impl Line {
     }
 }
 
+struct World<'a, const SEGMENT: i32> {
+    sectors: Vec<Vec<Sector<'a, SEGMENT>>>,
+}
+
+impl<'a, const SEGMENT: i32> World<'a, SEGMENT> {
+    fn new(width: i32, height: i32) -> Self {
+        let sector_width = (width / SEGMENT + 1) as usize;
+        let sector_height = (height / SEGMENT + 1) as usize;
+
+        let mut sectors = Vec::with_capacity(sector_height);
+        for _ in 0..sector_height {
+            let mut row = Vec::with_capacity(sector_width);
+            for _ in 0..sector_width {
+                row.push(Sector::new());
+            }
+            sectors.push(row);
+        }
+
+        Self { sectors }
+    }
+
+    fn add_line(&mut self, line: &'a Line) {
+        let (min_x, min_y) = (line.min_x(), line.min_y());
+        let (max_x, max_y) = (line.max_x(), line.max_y());
+
+        let (min_x, min_y) = (min_x / SEGMENT, min_y / SEGMENT);
+        let (max_x, max_y) = (max_x / SEGMENT, max_y / SEGMENT);
+
+        for y in min_y..=max_y {
+            for x in min_x..=max_x {
+                self.sectors[y as usize][x as usize].add_line(line);
+            }
+        }
+    }
+
+    fn add_point(&mut self, point: (i32, i32)) {
+        let (x, y) = (point.0 / SEGMENT, point.1 / SEGMENT);
+        self.sectors[y as usize][x as usize].add_point(point);
+    }
+
+    fn is_empty(&self, p: (i32, i32)) -> bool {
+        let (x, y) = (p.0 / SEGMENT, p.1 / SEGMENT);
+        let Some(row) = self.sectors.get(y as usize) else {
+            return true;
+        };
+
+        let Some(sector) = row.get(x as usize) else {
+            return true;
+        };
+
+        sector.is_empty(p)
+        // self.sectors[y as usize][x as usize].is_empty(p)
+    }
+}
+
+struct Sector<'a, const SEGMENT: i32> {
+    lines: Vec<&'a Line>,
+    points: Vec<(i32, i32)>,
+}
+
+impl<'a, const SEGMENT: i32> Sector<'a, SEGMENT> {
+    fn new() -> Self {
+        Sector {
+            lines: Vec::new(),
+            points: Vec::new(),
+        }
+    }
+
+    fn add_line(&mut self, line: &'a Line) {
+        self.lines.push(line);
+    }
+
+    fn add_point(&mut self, point: (i32, i32)) {
+        self.points.push(point);
+    }
+
+    fn is_empty(&self, p: (i32, i32)) -> bool {
+        self.lines.iter().all(|line| !line.has_point(p))
+            && self.points.iter().all(|point| !point.has_point(p))
+    }
+}
+
 fn find_max_y(lines: &[Line]) -> i32 {
     lines.iter().map(|line| line.max_y()).max().unwrap()
+}
+
+fn find_max_x(lines: &[Line]) -> i32 {
+    lines.iter().map(|line| line.max_x()).max().unwrap()
 }
 
 fn parse_lines(s: &str) -> Vec<Line> {
