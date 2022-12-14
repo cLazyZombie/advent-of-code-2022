@@ -3,9 +3,13 @@ pub fn solve_part1(input: &str) -> i32 {
     let mut points = Vec::new();
     let max_y = find_max_y(&lines);
     let mut endless = None;
+    let mut prev = None;
     'outer: for idx in 1.. {
-        let mut p = (500, 0);
-        println!("{}: {:?}", idx, p);
+        let mut p = if let Some(prev) = prev.take() {
+            prev
+        } else {
+            (500, 0)
+        };
         loop {
             if p.1 >= max_y {
                 endless = Some(idx);
@@ -15,6 +19,7 @@ pub fn solve_part1(input: &str) -> i32 {
             // go down
             let next_p = (p.0, p.1 + 1);
             if is_empty(next_p, &lines, &points) {
+                prev = Some(p);
                 p = next_p;
                 continue;
             }
@@ -22,6 +27,7 @@ pub fn solve_part1(input: &str) -> i32 {
             // go down left
             let next_p = (p.0 - 1, p.1 + 1);
             if is_empty(next_p, &lines, &points) {
+                prev = Some(p);
                 p = next_p;
                 continue;
             }
@@ -29,6 +35,7 @@ pub fn solve_part1(input: &str) -> i32 {
             // go down right
             let next_p = (p.0 + 1, p.1 + 1);
             if is_empty(next_p, &lines, &points) {
+                prev = Some(p);
                 p = next_p;
                 continue;
             }
@@ -52,13 +59,21 @@ pub fn solve_part2(input: &str) -> i32 {
 
     let mut points = Vec::new();
 
+    let mut prev = None;
     let mut full = None;
     'outer: for idx in 1.. {
+        // let mut p = if let Some(prev) = prev.take() {
+        //     prev
+        // } else {
+        //     (500, 0)
+        // };
         let mut p = (500, 0);
+
         loop {
             // go down
             let next_p = (p.0, p.1 + 1);
             if is_empty(next_p, &lines, &points) {
+                prev = Some(p);
                 p = next_p;
                 continue;
             }
@@ -66,6 +81,7 @@ pub fn solve_part2(input: &str) -> i32 {
             // go down left
             let next_p = (p.0 - 1, p.1 + 1);
             if is_empty(next_p, &lines, &points) {
+                prev = Some(p);
                 p = next_p;
                 continue;
             }
@@ -73,6 +89,7 @@ pub fn solve_part2(input: &str) -> i32 {
             // go down right
             let next_p = (p.0 + 1, p.1 + 1);
             if is_empty(next_p, &lines, &points) {
+                prev = Some(p);
                 p = next_p;
                 continue;
             }
@@ -194,7 +211,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_part1() {
         let input = include_str!("../input/day_14.txt");
         let answer = solve_part1(input);
@@ -211,6 +227,6 @@ mod tests {
     fn test_part2() {
         let input = include_str!("../input/day_14.txt");
         let answer = solve_part2(input);
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 28145);
     }
 }
