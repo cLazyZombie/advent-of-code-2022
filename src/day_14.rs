@@ -1,5 +1,6 @@
 pub fn solve_part1(input: &str) -> i32 {
-    let mut lines = parse_input(input);
+    let lines = parse_input(input);
+    let mut points = Vec::new();
     let max_y = find_max_y(&lines);
     let mut endless = None;
     'outer: for idx in 1.. {
@@ -13,27 +14,27 @@ pub fn solve_part1(input: &str) -> i32 {
 
             // go down
             let next_p = (p.0, p.1 + 1);
-            if is_empty(next_p, &lines) {
+            if is_empty(next_p, &lines, &points) {
                 p = next_p;
                 continue;
             }
 
             // go down left
             let next_p = (p.0 - 1, p.1 + 1);
-            if is_empty(next_p, &lines) {
+            if is_empty(next_p, &lines, &points) {
                 p = next_p;
                 continue;
             }
 
             // go down right
             let next_p = (p.0 + 1, p.1 + 1);
-            if is_empty(next_p, &lines) {
+            if is_empty(next_p, &lines, &points) {
                 p = next_p;
                 continue;
             }
 
             // stuck
-            lines.push(Line::new(p, p));
+            points.push(p);
             break;
         }
     }
@@ -42,19 +43,63 @@ pub fn solve_part1(input: &str) -> i32 {
 }
 
 pub fn solve_part2(input: &str) -> i32 {
-    0
+    let mut lines = parse_input(input);
+
+    // floor
+    let max_y = find_max_y(&lines) + 2;
+    let floor = Line::new((i32::MIN, max_y), (i32::MAX, max_y));
+    lines.push(floor);
+
+    let mut points = Vec::new();
+
+    let mut full = None;
+    'outer: for idx in 1.. {
+        let mut p = (500, 0);
+        loop {
+            // go down
+            let next_p = (p.0, p.1 + 1);
+            if is_empty(next_p, &lines, &points) {
+                p = next_p;
+                continue;
+            }
+
+            // go down left
+            let next_p = (p.0 - 1, p.1 + 1);
+            if is_empty(next_p, &lines, &points) {
+                p = next_p;
+                continue;
+            }
+
+            // go down right
+            let next_p = (p.0 + 1, p.1 + 1);
+            if is_empty(next_p, &lines, &points) {
+                p = next_p;
+                continue;
+            }
+
+            // stuck
+            // println!("{}: {:?}", idx, p);
+            if p == (500, 0) {
+                full = Some(idx);
+                break 'outer;
+            }
+            points.push(p);
+            break;
+        }
+    }
+
+    full.unwrap()
 }
 
 fn parse_input(input: &str) -> Vec<Line> {
     input
         .lines()
-        .map(|line| parse_lines(line).into_iter())
-        .flatten()
+        .flat_map(|line| parse_lines(line).into_iter())
         .collect()
 }
 
-fn is_empty(p: (i32, i32), lines: &[Line]) -> bool {
-    lines.iter().all(|line| !line.has_point(p))
+fn is_empty(p: (i32, i32), lines: &[Line], points: &[(i32, i32)]) -> bool {
+    lines.iter().all(|line| !line.has_point(p)) && points.iter().all(|point| !point.has_point(p))
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -63,13 +108,25 @@ struct Line {
     end: (i32, i32),
 }
 
+trait HasPoint {
+    fn has_point(&self, p: (i32, i32)) -> bool;
+}
+
+impl HasPoint for (i32, i32) {
+    fn has_point(&self, p: (i32, i32)) -> bool {
+        self == &p
+    }
+}
+
+impl HasPoint for Line {
+    fn has_point(&self, p: (i32, i32)) -> bool {
+        self.min_x() <= p.0 && p.0 <= self.max_x() && self.min_y() <= p.1 && p.1 <= self.max_y()
+    }
+}
+
 impl Line {
     fn new(start: (i32, i32), end: (i32, i32)) -> Self {
         Line { start, end }
-    }
-
-    fn has_point(&self, p: (i32, i32)) -> bool {
-        self.min_x() <= p.0 && p.0 <= self.max_x() && self.min_y() <= p.1 && p.1 <= self.max_y()
     }
 
     fn min_x(&self) -> i32 {
@@ -90,7 +147,7 @@ impl Line {
 }
 
 fn find_max_y(lines: &[Line]) -> i32 {
-    lines.iter().map(|line| line.start.1).max().unwrap()
+    lines.iter().map(|line| line.max_y()).max().unwrap()
 }
 
 fn parse_lines(s: &str) -> Vec<Line> {
@@ -147,7 +204,7 @@ mod tests {
     #[test]
     fn test_part2_sample() {
         let answer = solve_part2(SAMPLE_INPUT);
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 93);
     }
 
     #[test]
