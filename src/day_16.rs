@@ -352,6 +352,6 @@ Valve JJ has flow rate=21; tunnel leads to valve II"#;
     fn test_part2() {
         let input = include_str!("../input/day_16.txt");
         let answer = solve_part2(input);
-        assert_eq!(answer, 28145);
+        assert_eq!(answer, 2100);
     }
 }
