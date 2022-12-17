@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::collections::{BTreeMap, HashMap};
 
 pub fn solve_part1(input: &str) -> i32 {
