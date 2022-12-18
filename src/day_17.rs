@@ -3,11 +3,16 @@
 #![allow(unused_mut)]
 
 pub fn solve_part1(input: &str) -> u64 {
-    simulate(input, 2021)
+    simulate(input, 2022)
+    // let a = simulate(input, 6710515);
+    // let a = simulate(input, 6710517);
+    // let b = simulate2(input, 6710517);
+    // assert_eq!(a, b);
+    // b
 }
 
-pub fn solve_part2(input: &str) -> u32 {
-    0
+pub fn solve_part2(input: &str) -> u64 {
+    simulate2(input, 1000000000000_usize)
 }
 
 fn simulate(input: &str, count: u64) -> u64 {
@@ -23,7 +28,6 @@ fn simulate(input: &str, count: u64) -> u64 {
     let mut chamber = Chamber::new();
     for (idx, &rock_type) in rocks.iter().cycle().enumerate() {
         let mut rock = chamber.create_rock(rock_type);
-        // chamber.print(Some(&rock));
 
         while let Some(&dir) = jets.next() {
             chamber.move_rock(&mut rock, dir);
@@ -32,11 +36,71 @@ fn simulate(input: &str, count: u64) -> u64 {
                 chamber.land_rock(rock);
                 break;
             }
-            // chamber.print(Some(&rock));
         }
-        // chamber.print(None);
 
-        if idx == count as usize {
+        if idx + 1 == count as usize {
+            return chamber.height();
+        }
+    }
+
+    unreachable!()
+}
+
+fn simulate2(input: &str, count: usize) -> u64 {
+    let jets = load_input(input);
+    let rocks = [
+        RockType::Horizontal,
+        RockType::Cross,
+        RockType::LMirror,
+        RockType::I,
+        RockType::Square,
+    ];
+    let cycle = num::integer::lcm(rocks.len(), jets.len());
+    // let cycle = rocks.len() * jets.len();
+    let mut pattern = Vec::new();
+
+    let mut jets_it = jets.iter().cycle();
+    let mut chamber = Chamber::new();
+    let mut idx = 0;
+    let mut pattern_found = false;
+    for &rock_type in rocks.iter().cycle() {
+        idx += 1;
+
+        let mut rock = chamber.create_rock(rock_type);
+
+        while let Some(&dir) = jets_it.next() {
+            chamber.move_rock(&mut rock, dir);
+            if !chamber.move_down_rock(&mut rock) {
+                chamber.land_rock(rock);
+                chamber.remove_after_blocking();
+                break;
+            }
+        }
+
+        if !pattern_found && (idx - 1) % cycle == 0 {
+            for (pidx, p, base, height) in &pattern {
+                if p == &chamber.spaces {
+                    let r = (count - pidx) % (idx - pidx);
+                    let c = (count - pidx) / (idx - pidx);
+                    println!("pattern found at {}, prev: {}. cycle: {}", idx, pidx, cycle);
+                    println!(
+                        "prev base: {}, cur base: {}, c: {}, r: {}",
+                        base, chamber.base, c, r
+                    );
+                    println!("prev height: {}, cur height: {}", height, chamber.height());
+                    chamber.base = base + c * (chamber.base - base);
+
+                    idx = count - r;
+                    pattern_found = true;
+                    break;
+                }
+            }
+            if !pattern_found {
+                pattern.push((idx, chamber.spaces.clone(), chamber.base, chamber.height()));
+            }
+        }
+
+        if idx == count {
             return chamber.height();
         }
     }
@@ -106,11 +170,15 @@ const CHAMBER_WIDTH: u64 = 7;
 #[derive(Debug)]
 struct Chamber {
     spaces: Vec<[bool; CHAMBER_WIDTH as usize]>,
+    base: usize,
 }
 
 impl Chamber {
     pub fn new() -> Self {
-        Self { spaces: Vec::new() }
+        Self {
+            spaces: Vec::new(),
+            base: 0,
+        }
     }
 
     fn create_rock(&self, rock_type: RockType) -> Rock {
@@ -144,7 +212,7 @@ impl Chamber {
     }
 
     fn move_down_rock(&self, rock: &mut Rock) -> bool {
-        if rock.y == 0 {
+        if rock.y as usize == self.base {
             return false;
         }
 
@@ -161,29 +229,78 @@ impl Chamber {
     fn land_rock(&mut self, rock: Rock) {
         // check enough height
         let height = rock.y + rock.rock_type.height();
-        if self.spaces.len() < height as usize {
-            self.spaces
-                .resize(height as usize, [false; CHAMBER_WIDTH as usize]);
+        if self.height() < height {
+            let need = height as usize - self.height() as usize;
+            let total = self.spaces.len() + need;
+            self.spaces.resize(total, [false; CHAMBER_WIDTH as usize]);
         }
 
         for (x, y) in rock.positions() {
-            self.spaces[y as usize][x as usize] = true;
+            if (y as usize) < self.base {
+                assert!(y as usize >= self.base, "y: {}, base: {}", y, self.base);
+            }
+            self.spaces[y as usize - self.base][x as usize] = true;
         }
     }
 
     fn height(&self) -> u64 {
-        self.spaces.len() as u64
+        self.spaces.len() as u64 + self.base as u64
     }
 
     fn is_empty(&self, rock: &Rock) -> bool {
         for (x, y) in rock.positions() {
-            if let Some(row) = self.spaces.get(y as usize) {
+            if (y as usize) < self.base {
+                continue;
+            }
+
+            if let Some(row) = self.spaces.get(y as usize - self.base) {
                 if row[x as usize] {
                     return false;
                 }
             }
         }
         true
+    }
+
+    fn remove_after_blocking(&mut self) {
+        let mut spaces = self.spaces.clone();
+        spaces.push([false; CHAMBER_WIDTH as usize]);
+
+        let y = spaces.len() - 1;
+        let mut stack = Vec::new();
+        stack.push((0, y));
+        spaces[y][0] = true;
+
+        let mut smallest_y = y;
+
+        while let Some((x, y)) = stack.pop() {
+            smallest_y = smallest_y.min(y);
+
+            // left
+            if x > 0 && !spaces[y][x - 1] {
+                spaces[y][x - 1] = true;
+                stack.push((x - 1, y));
+            }
+            // right
+            if x < CHAMBER_WIDTH as usize - 1 && !spaces[y][x + 1] {
+                spaces[y][x + 1] = true;
+                stack.push((x + 1, y));
+            }
+            // down
+            if y > 0 && !spaces[y - 1][x] {
+                spaces[y - 1][x] = true;
+                stack.push((x, y - 1));
+            }
+            // up
+            if y < spaces.len() - 1 && !spaces[y + 1][x] {
+                spaces[y + 1][x] = true;
+                stack.push((x, y + 1));
+            }
+        }
+
+        let base = smallest_y.max(0);
+        self.spaces = self.spaces.split_off(base);
+        self.base += base;
     }
 
     fn print(&self, rock: Option<&Rock>) {
@@ -193,16 +310,16 @@ impl Chamber {
             self.height()
         };
 
-        for y in (0..max_y).rev() {
-            print!("|");
+        for y in (self.base..max_y as usize).rev() {
+            print!("[{:5}] |", y);
             for x in 0..CHAMBER_WIDTH {
                 if let Some(rock) = rock {
-                    if rock.positions().contains(&(x, y)) {
+                    if rock.positions().contains(&(x, y as u64)) {
                         print!("@");
                         continue;
                     }
                 }
-                if let Some(row) = self.spaces.get(y as usize) {
+                if let Some(row) = self.spaces.get(y as usize - self.base) {
                     if row[x as usize] {
                         print!("#");
                     } else {
@@ -214,7 +331,7 @@ impl Chamber {
             }
             println!("|");
         }
-        println!("+-------+");
+        println!("[ base] +-------+");
         println!("");
     }
 }
@@ -242,6 +359,7 @@ mod tests {
     use super::*;
 
     const SAMPLE_INPUT: &str = ">>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>";
+    // const SAMPLE_INPUT: &str = ">>><<><>><<<>><>>><<<>><<<<<<<<<<><<<><<<>><>><<>>>><<><<<";
 
     #[test]
     fn test_load() {
@@ -306,6 +424,41 @@ mod tests {
     }
 
     #[test]
+    fn test_remove_after_blocking() {
+        let mut chamber = Chamber::new();
+        chamber.remove_after_blocking();
+        assert_eq!(chamber.base, 0);
+        assert_eq!(chamber.height(), 0);
+
+        let mut rock = chamber.create_rock(RockType::Horizontal);
+        chamber.land_rock(rock);
+        assert_eq!(chamber.height(), 4);
+
+        for x in 0..CHAMBER_WIDTH {
+            chamber.spaces[1][x as usize] = true;
+        }
+        chamber.spaces[2][0] = true;
+        // chamber.print(None);
+
+        chamber.remove_after_blocking();
+        assert_eq!(chamber.base, 2);
+        assert_eq!(chamber.height(), 4);
+        // chamber.print(None);
+
+        let mut rock = chamber.create_rock(RockType::Horizontal);
+        // chamber.print(Some(&rock));
+        assert_eq!((rock.x, rock.y), (2, 7));
+        for _ in 0..3 {
+            assert_eq!(chamber.move_down_rock(&mut rock), true);
+        }
+        assert_eq!(chamber.move_down_rock(&mut rock), false);
+        // chamber.print(Some(&rock));
+        chamber.land_rock(rock);
+        assert_eq!(chamber.height(), 5);
+        // chamber.print(None);
+    }
+
+    #[test]
     fn test_part1() {
         let input = include_str!("../input/day_17.txt");
         assert_eq!(solve_part1(input), 3191);
@@ -320,13 +473,12 @@ mod tests {
     #[test]
     fn test_part2() {
         let input = include_str!("../input/day_17.txt");
-        assert_eq!(solve_part2(input), 0);
+        assert_eq!(solve_part2(input), 1572096678820);
     }
 
     #[test]
-    #[ignore]
     fn test_part2_sample() {
         let answer = solve_part2(SAMPLE_INPUT);
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 1514285714288);
     }
 }
